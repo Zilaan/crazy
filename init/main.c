@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -41,25 +41,25 @@
 /* ST includes */
 #include "stm32fxxx.h"
 
-int main() 
+int main()
 {
-  //Initialize the platform.
-  platformInit();
+	//Initialize the platform.
+	platformInit();
 
-  //Launch the system task that will initialize and start everything
-  systemLaunch();
+	//Launch the system task that will initialize and start everything
+	systemLaunch();
 
-  //Start the FreeRTOS scheduler
-  vTaskStartScheduler();
+	//Start the FreeRTOS scheduler
+	vTaskStartScheduler();
 
-  //TODO: Move to platform launch failed
-  ledInit();
-  ledSet(0, 1);
-  ledSet(1, 1);
+	//TODO: Move to platform launch failed
+	ledInit();
+	ledSet(0, 1);
+	ledSet(1, 1);
 
-  //Should never reach this point!
-  while(1);
+	//Should never reach this point!
+	while(1);
 
-  return 0;
+	return 0;
 }
 
