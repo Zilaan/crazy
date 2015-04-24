@@ -8,3 +8,5 @@ bin/*
 config.mk
 cflie.*
 version.c
+*.vim
+tags
