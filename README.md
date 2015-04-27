@@ -1,4 +1,5 @@
 #Crazyflie 2.0 Firmware
+*Note* this project has been changed for development testing.
 
 This project contains the source code for the Crazyflie 2.0 firmware. More information can be found on the 
 [Bitcraze wiki](http://wiki.bitcraze.se/projects:crazyflie2:index)
