@@ -10,3 +10,4 @@ cflie.*
 version.c
 *.vim
 tags
+*.swp
