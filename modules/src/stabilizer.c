@@ -76,7 +76,10 @@ static float rollRateDesired;
 static float pitchRateDesired;
 static float yawRateDesired;
 
-// User defined
+/*
+ * User defined variables. The size of kMatrix and
+ * krMatrix may change.
+ */
 static float ref[3] = {0, 0, 0}; // Ref from user (r)
 static float states[5] = {0, 0, 0, 0, 0}; // States (x)
 uint16_t controlSig[4] = {0, 0, 0, 0}; // Control signal (u)
