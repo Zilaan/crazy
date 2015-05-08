@@ -51,8 +51,6 @@
 #undef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
-#define R 4
-#define C 3
 /**
  * Defines in what divided update rate should the attitude
  * control loop run relative the rate control loop.
@@ -82,62 +80,63 @@ static float yawRateDesired;
  * User defined variables. The size of kMatrix and
  * krMatrix may change.
  */
-void matrixAdd(float target[R][C], float A[R][C], float B[R][C], uint8_t row, uint8_t col) {
-  uint16_t len = row * col;
-  uint16_t i, j;
-  for(i = 0; i < row; i++) {
-    for(j = 0; j < col; j++) {
-      target[i][j] = A[i][j] + B[i][j];
-    }
-  }
-}
-
-void matrixAdd(float *target, float *A, float *B, uint8_t row, uint8_t col) {
+void matrixAdd(float target[], float A[], float B[], uint8_t row, uint8_t col) {
   uint16_t len = row * col;
   uint16_t i;
   for(i = 0; i < len; i++) {
-    *(target++) = *(A++) + *(B++);
+      target[i] = A[i] + B[i];
   }
 }
 
-void matrixMultiply(float target[][3], float K[][3], float u[][3], int m1, int n1, int m2, int n2) {
-
-  int i, j, k, m3, n3, row;
-
+void matrixMultiply(float target[], float K[], float u[], uint8_t m1, uint8_t n1, uint8_t m2, uint8_t n2) {
+  uint8_t i, j, k, m3, n3;
   m3 = m1;
   n3 = n2;
 
-  if(n1 == m2) {
+  if (n1 == m2) {
     for(i = 0; i < m3; i++) {
       for(j = 0; j < n3; j++)
-        target[i][j] = 0.0f;
+        target[j + i * n3] = 0.0f;
     }
 
-    for(i = 0; i < m3; i++) {
+    for (i = 0; i < m3; i++) {
       for(j = 0; j < n3; j++) {
         for(k = 0; k < n1; k++) {
-          target[i][j] = target[i][j] + K[i][k]*u[k][j];
+          target[j + i * n3] = target[j + i * n3] + K[k + i * n1] * u[j + k * n2];
         }
       }
     }
-
   }
 }
 
-static float ref[3] = {0, 0, 0}; // Ref from user (r)
-static float states[5] = {0, 0, 0, 0, 0}; // States (x)
-uint16_t controlSig[4] = {0, 0, 0, 0}; // Control signal (u)
-static float kMatrix[4][5] = { // K-matrix
-  {-166336.9598, -166336.9598, 158.1139, -500000, -500000},
-  {-166336.9598, 166336.9598, -158.1139, -500000, 500000},
-  {166336.9598, 166336.9598, 158.1139, 500000, 500000},
-  {166336.9598, -166336.9598, -158.1139, 500000, -500000}
+
+/* u = Kr * r + K * x
+ *     4x3 3x1 + 4x5 5x1
+ */
+float mulTemp1[4], mulTemp2[4];
+static float ref[3] = {0,
+                          0,
+                          0}; // Ref from user (r)
+static float states[5] = {0,
+                             0,
+                             0,
+                             0,
+                             0}; // States (x)
+float controlSig[4] = {0,
+                             0,
+                             0,
+                             0}; // Control signal (u)
+static float kMatrix[] = { // K-matrix
+  -166336.9598, -166336.9598, 158.1139, -500000, -500000,
+  -166336.9598, 166336.9598, -158.1139, -500000, 500000,
+  166336.9598, 166336.9598, 158.1139, 500000, 500000,
+  166336.9598, -166336.9598, -158.1139, 500000, -500000
 };
-static float krMatrix[4][3] = { // Kr-matrix
-  {1, 0, 0},
-  {0, 1, 0},
-  {0, 0, 1},
-  {0, 0, 0}
+static float krMatrix[] = { // Kr-matrix
+  1, 0, 0,
+  0, 1, 0,
+  0, 0, 1,
+  0, 0, 0
 };
 
 // Baro variables
@@ -276,11 +275,9 @@ static void stabilizerTask(void* param)
         states[4] = eulerRollActual * M_PI / 180.0f;
 
         // Calculate control signal
-        controlSig[0] = (uint16_t) (krMatrix[0][0]*ref[0] + krMatrix[0][1]*ref[1] + krMatrix[0][2]*ref[2] + kMatrix[0][0]*states[0] + kMatrix[0][1]*states[1] + kMatrix[0][2]*states[2] + kMatrix[0][3]*states[3] + kMatrix[0][4]*states[4]);
-        controlSig[1] = (uint16_t) (krMatrix[1][0]*ref[0] + krMatrix[1][1]*ref[1] + krMatrix[1][2]*ref[2] + kMatrix[1][0]*states[0] + kMatrix[1][1]*states[1] + kMatrix[1][2]*states[2] + kMatrix[1][3]*states[3] + kMatrix[1][4]*states[4]);
-        controlSig[2] = (uint16_t) (krMatrix[2][0]*ref[0] + krMatrix[2][1]*ref[1] + krMatrix[2][2]*ref[2] + kMatrix[2][0]*states[0] + kMatrix[2][1]*states[1] + kMatrix[2][2]*states[2] + kMatrix[2][3]*states[3] + kMatrix[2][4]*states[4]);
-        controlSig[3] = (uint16_t) (krMatrix[3][0]*ref[0] + krMatrix[3][1]*ref[1] + krMatrix[3][2]*ref[2] + kMatrix[3][0]*states[0] + kMatrix[3][1]*states[1] + kMatrix[3][2]*states[2] + kMatrix[3][3]*states[3] + kMatrix[3][4]*states[4]);
-
+        matrixMultiply(mulTemp1, krMatrix, ref, 4, 3, 3, 1);
+        matrixMultiply(mulTemp2, kMatrix, states, 4, 5, 5, 1);
+        matrixAdd(controlSig, mulTemp1, mulTemp2, 4, 1);
       }
 
       if (!altHold || !imuHasBarometer())
@@ -297,10 +294,10 @@ static void stabilizerTask(void* param)
       if (actuatorThrust > 0)
       {
         // Send control signal to the motors and add user thrus to it
-        motorsSetRatio(MOTOR_M1, limitThrust(controlSig[0] + actuatorThrust));
-        motorsSetRatio(MOTOR_M2, limitThrust(controlSig[1] + actuatorThrust));
-        motorsSetRatio(MOTOR_M3, limitThrust(controlSig[2] + actuatorThrust));
-        motorsSetRatio(MOTOR_M4, limitThrust(controlSig[3] + actuatorThrust));
+        motorsSetRatio(MOTOR_M1, limitThrust((uint16_t) (controlSig[0] + actuatorThrust)));
+        motorsSetRatio(MOTOR_M2, limitThrust((uint16_t) (controlSig[1] + actuatorThrust)));
+        motorsSetRatio(MOTOR_M3, limitThrust((uint16_t) (controlSig[2] + actuatorThrust)));
+        motorsSetRatio(MOTOR_M4, limitThrust((uint16_t) (controlSig[3] + actuatorThrust)));
       }
       else
       {
