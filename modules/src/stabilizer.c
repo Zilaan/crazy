@@ -51,6 +51,8 @@
 #undef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
+#define R 4
+#define C 3
 /**
  * Defines in what divided update rate should the attitude
  * control loop run relative the rate control loop.
@@ -80,6 +82,24 @@ static float yawRateDesired;
  * User defined variables. The size of kMatrix and
  * krMatrix may change.
  */
+void matrixAdd(float target[R][C], float A[R][C], float B[R][C], uint8_t row, uint8_t col) {
+  uint16_t len = row * col;
+  uint16_t i, j;
+  for(i = 0; i < row; i++) {
+    for(j = 0; j < col; j++) {
+      target[i][j] = A[i][j] + B[i][j];
+    }
+  }
+}
+
+void matrixAdd(float *target, float *A, float *B, uint8_t row, uint8_t col) {
+  uint16_t len = row * col;
+  uint16_t i;
+  for(i = 0; i < len; i++) {
+    *(target++) = *(A++) + *(B++);
+  }
+}
+
 void matrixMultiply(float target[][3], float K[][3], float u[][3], int m1, int n1, int m2, int n2) {
 
   int i, j, k, m3, n3, row;
