@@ -80,20 +80,44 @@ static float yawRateDesired;
  * User defined variables. The size of kMatrix and
  * krMatrix may change.
  */
+void matrixMultiply(float target[][3], float K[][3], float u[][3], int m1, int n1, int m2, int n2) {
+
+  int i, j, k, m3, n3, row;
+
+  m3 = m1;
+  n3 = n2;
+
+  if(n1 == m2) {
+    for(i = 0; i < m3; i++) {
+      for(j = 0; j < n3; j++)
+        target[i][j] = 0.0f;
+    }
+
+    for(i = 0; i < m3; i++) {
+      for(j = 0; j < n3; j++) {
+        for(k = 0; k < n1; k++) {
+          target[i][j] = target[i][j] + K[i][k]*u[k][j];
+        }
+      }
+    }
+
+  }
+}
+
 static float ref[3] = {0, 0, 0}; // Ref from user (r)
 static float states[5] = {0, 0, 0, 0, 0}; // States (x)
 uint16_t controlSig[4] = {0, 0, 0, 0}; // Control signal (u)
 static float kMatrix[4][5] = { // K-matrix
- {-166336.9598, -166336.9598, 158.1139, -500000, -500000},
- {-166336.9598, 166336.9598, -158.1139, -500000, 500000},
- {166336.9598, 166336.9598, 158.1139, 500000, 500000},
- {166336.9598, -166336.9598, -158.1139, 500000, -500000}
+  {-166336.9598, -166336.9598, 158.1139, -500000, -500000},
+  {-166336.9598, 166336.9598, -158.1139, -500000, 500000},
+  {166336.9598, 166336.9598, 158.1139, 500000, 500000},
+  {166336.9598, -166336.9598, -158.1139, 500000, -500000}
 };
 static float krMatrix[4][3] = { // Kr-matrix
- {1, 0, 0},
- {0, 1, 0},
- {0, 0, 1},
- {0, 0, 0}
+  {1, 0, 0},
+  {0, 1, 0},
+  {0, 0, 1},
+  {0, 0, 0}
 };
 
 // Baro variables
