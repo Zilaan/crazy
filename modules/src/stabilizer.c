@@ -45,6 +45,7 @@
 #include "lps25h.h"
 #include "debug.h"
 #include "led.h"
+#include "matrix.h"
 
 #undef max
 #define max(a,b) ((a) > (b) ? (a) : (b))
@@ -113,7 +114,7 @@ void matrixMultiply(float target[], float K[], float u[], uint8_t m1, uint8_t n1
 /* u = Kr * r + K * x
  *     4x3 3x1 + 4x5 5x1
  */
-float mulTemp1[4], mulTemp2[4];
+float mulTemp1[4], mulTemp2[4], tempMat[4];
 static float ref[3] = {0,
                           0,
                           0}; // Ref from user (r)
@@ -126,19 +127,6 @@ float controlSig[4] = {0,
                              0,
                              0,
                              0}; // Control signal (u)
-static float kMatrix[] = { // K-matrix
-  -166336.9598, -166336.9598, 158.1139, -500000, -500000,
-  -166336.9598, 166336.9598, -158.1139, -500000, 500000,
-  166336.9598, 166336.9598, 158.1139, 500000, 500000,
-  166336.9598, -166336.9598, -158.1139, 500000, -500000
-};
-static float krMatrix[] = { // Kr-matrix
-  1, 0, 0,
-  0, 1, 0,
-  0, 0, 1,
-  0, 0, 0
-};
-
 // Baro variables
 static float temperature; // temp from barometer
 static float pressure;    // pressure from barometer
@@ -258,9 +246,9 @@ static void stabilizerTask(void* param)
       commanderGetRPYType(&rollType, &pitchType, &yawType);
 
       // References given by user
-      ref[0] = eulerPitchDesired * M_PI / 180.0f;
+      ref[0] = -eulerYawDesired * M_PI / 180.0f;
       ref[1] = eulerRollDesired * M_PI / 180.0f;
-      ref[2] = eulerYawDesired * M_PI / 180.0f;
+      ref[2] = -eulerPitchDesired * M_PI / 180.0f;
 
       // 250HZ
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
@@ -271,13 +259,18 @@ static void stabilizerTask(void* param)
         states[0] = gyro.x * M_PI / 180.0f;
         states[1] = gyro.y * M_PI / 180.0f;
         states[2] = gyro.z * M_PI / 180.0f;
-        states[3] = eulerPitchActual * M_PI / 180.0f;
-        states[4] = eulerRollActual * M_PI / 180.0f;
+        states[3] = eulerRollActual * M_PI / 180.0f;
+        states[4] = eulerPitchActual * M_PI / 180.0f;
 
         // Calculate control signal
-        matrixMultiply(mulTemp1, krMatrix, ref, 4, 3, 3, 1);
+        matrixMultiply(mulTemp1, krMatrix, ref, 3, 3, 3, 1);
         matrixMultiply(mulTemp2, kMatrix, states, 4, 5, 5, 1);
-        matrixAdd(controlSig, mulTemp1, mulTemp2, 4, 1);
+        tempMat[0] = 0;
+        tempMat[1] = mulTemp1[0];
+        tempMat[2] = mulTemp1[1];
+        tempMat[3] = mulTemp1[2];
+
+        matrixAdd(controlSig, tempMat, mulTemp2, 4, 1);
       }
 
       if (!altHold || !imuHasBarometer())
