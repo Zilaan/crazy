@@ -114,7 +114,7 @@ void matrixMultiply(float target[], float K[], float u[], uint8_t m1, uint8_t n1
 /* u = Kr * r + K * x
  *     4x3 3x1 + 4x5 5x1
  */
-float mulTemp1[4], mulTemp2[4], tempMat[4];
+float mulTemp1[3], mulTemp2[3], tempMat[4];
 static float ref[3] = {0,
                           0,
                           0}; // Ref from user (r)
@@ -123,8 +123,7 @@ static float states[5] = {0,
                              0,
                              0,
                              0}; // States (x)
-float controlSig[4] = {0,
-                             0,
+float controlSig[3] = {0,
                              0,
                              0}; // Control signal (u)
 // Baro variables
@@ -255,6 +254,7 @@ static void stabilizerTask(void* param)
       {
         sensfusion6UpdateQ(gyro.x, gyro.y, gyro.z, acc.x, acc.y, acc.z, FUSION_UPDATE_DT);
         sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
+
         // Get states
         states[0] = gyro.x * M_PI / 180.0f;
         states[1] = gyro.y * M_PI / 180.0f;
@@ -262,15 +262,12 @@ static void stabilizerTask(void* param)
         states[3] = eulerRollActual * M_PI / 180.0f;
         states[4] = eulerPitchActual * M_PI / 180.0f;
 
-        // Calculate control signal
+        // Kr*r and K*x
         matrixMultiply(mulTemp1, krMatrix, ref, 3, 3, 3, 1);
-        matrixMultiply(mulTemp2, kMatrix, states, 4, 5, 5, 1);
-        tempMat[0] = 0;
-        tempMat[1] = mulTemp1[0];
-        tempMat[2] = mulTemp1[1];
-        tempMat[3] = mulTemp1[2];
+        matrixMultiply(mulTemp2, kMatrix, states, 3, 5, 5, 1);
 
-        matrixAdd(controlSig, tempMat, mulTemp2, 4, 1);
+        // u = Kr*r + K*x
+        matrixAdd(controlSig, mulTemp1, mulTemp2, 3, 1);
       }
 
       if (!altHold || !imuHasBarometer())
@@ -286,11 +283,17 @@ static void stabilizerTask(void* param)
 
       if (actuatorThrust > 0)
       {
-        // Send control signal to the motors and add user thrus to it
-        motorsSetRatio(MOTOR_M1, limitThrust((uint16_t) (controlSig[0] + actuatorThrust)));
-        motorsSetRatio(MOTOR_M2, limitThrust((uint16_t) (controlSig[1] + actuatorThrust)));
-        motorsSetRatio(MOTOR_M3, limitThrust((uint16_t) (controlSig[2] + actuatorThrust)));
-        motorsSetRatio(MOTOR_M4, limitThrust((uint16_t) (controlSig[3] + actuatorThrust)));
+        // Distribute torqu over the motors
+        motorPowerM1 = limitThrust((uint16_t) (actuatorThrust - controlSig[0] - controlSig[1] - controlSig[2]));
+        motorPowerM2 = limitThrust((uint16_t) (actuatorThrust - controlSig[0] + controlSig[1] + controlSig[2]));
+        motorPowerM3 = limitThrust((uint16_t) (actuatorThrust + controlSig[0] + controlSig[1] - controlSig[2]));
+        motorPowerM4 = limitThrust((uint16_t) (actuatorThrust + controlSig[0] - controlSig[1] + controlSig[2]));
+
+        // Write to motors
+        motorsSetRatio(MOTOR_M1, motorPowerM1);
+        motorsSetRatio(MOTOR_M2, motorPowerM2);
+        motorsSetRatio(MOTOR_M3, motorPowerM3);
+        motorsSetRatio(MOTOR_M4, motorPowerM4);
       }
       else
       {
