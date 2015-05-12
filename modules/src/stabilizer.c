@@ -263,14 +263,14 @@ static void stabilizerTask(void* param)
         states[4] = eulerPitchActual * M_PI / 180.0f;
 
         // Calculate control signal
-        matrixMultiply(mulTemp1, krMatrix, ref, 3, 3, 3, 1);
-        matrixMultiply(mulTemp2, kMatrix, states, 4, 5, 5, 1);
+        //matrixMultiply(mulTemp1, krMatrix, ref, 3, 3, 3, 1);
+        matrixMultiply(controlSig, kMatrix, states, 4, 5, 5, 1);
         tempMat[0] = 0;
         tempMat[1] = mulTemp1[0];
         tempMat[2] = mulTemp1[1];
         tempMat[3] = mulTemp1[2];
 
-        matrixAdd(controlSig, tempMat, mulTemp2, 4, 1);
+        //matrixAdd(controlSig, tempMat, mulTemp2, 4, 1);
       }
 
       if (!altHold || !imuHasBarometer())
@@ -287,10 +287,14 @@ static void stabilizerTask(void* param)
       if (actuatorThrust > 0)
       {
         // Send control signal to the motors and add user thrus to it
-        motorsSetRatio(MOTOR_M1, limitThrust((uint16_t) (controlSig[0] + actuatorThrust)));
-        motorsSetRatio(MOTOR_M2, limitThrust((uint16_t) (controlSig[1] + actuatorThrust)));
-        motorsSetRatio(MOTOR_M3, limitThrust((uint16_t) (controlSig[2] + actuatorThrust)));
-        motorsSetRatio(MOTOR_M4, limitThrust((uint16_t) (controlSig[3] + actuatorThrust)));
+        motorPowerM1 = limitThrust((uint16_t) (controlSig[0] + actuatorThrust));
+        motorPowerM2 = limitThrust((uint16_t) (controlSig[1] + actuatorThrust));
+        motorPowerM3 = limitThrust((uint16_t) (controlSig[2] + actuatorThrust));
+        motorPowerM4 = limitThrust((uint16_t) (controlSig[3] + actuatorThrust));
+        motorsSetRatio(MOTOR_M1, motorPowerM1);
+        motorsSetRatio(MOTOR_M2, motorPowerM2);
+        motorsSetRatio(MOTOR_M3, motorPowerM3);
+        motorsSetRatio(MOTOR_M4, motorPowerM4);
       }
       else
       {
