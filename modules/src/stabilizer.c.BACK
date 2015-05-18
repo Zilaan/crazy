@@ -118,19 +118,15 @@ float mulTemp1[4], mulTemp2[4], tempMat[4];
 static float ref[3] = {0,
                           0,
                           0}; // Ref from user (r)
-
-static float states[8] = {0,
+static float states[5] = {0,
                              0,
                              0,
                              0,
-                             0, 0, 0, 0}; // States (x)
+                             0}; // States (x)
 float controlSig[4] = {0,
                              0,
                              0,
                              0}; // Control signal (u)
-
-#define TO_RAD 0.01745329251
-
 // Baro variables
 static float temperature; // temp from barometer
 static float pressure;    // pressure from barometer
@@ -250,9 +246,9 @@ static void stabilizerTask(void* param)
       commanderGetRPYType(&rollType, &pitchType, &yawType);
 
       // References given by user
-      //ref[0] = -eulerYawDesired * M_PI / 180.0f;
-      //ref[1] = eulerRollDesired * M_PI / 180.0f;
-      //ref[2] = -eulerPitchDesired * M_PI / 180.0f;
+      ref[0] = -eulerYawDesired * M_PI / 180.0f;
+      ref[1] = eulerRollDesired * M_PI / 180.0f;
+      ref[2] = -eulerPitchDesired * M_PI / 180.0f;
 
       // 250HZ
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
@@ -260,19 +256,21 @@ static void stabilizerTask(void* param)
         sensfusion6UpdateQ(gyro.x, gyro.y, gyro.z, acc.x, acc.y, acc.z, FUSION_UPDATE_DT);
         sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
         // Get states
-
-        states[0] = gyro.x * TO_RAD;
-        states[1] = gyro.y * TO_RAD;
-        states[2] = (eulerYawDesired - gyro.z) * TO_RAD;
-        states[3] = (-eulerRollDesired - eulerRollActual) * TO_RAD;
-        states[4] = (eulerPitchDesired - eulerPitchActual) * TO_RAD;
+        states[0] = gyro.x * M_PI / 180.0f;
+        states[1] = gyro.y * M_PI / 180.0f;
+        states[2] = gyro.z * M_PI / 180.0f;
+        states[3] = eulerRollActual * M_PI / 180.0f;
+        states[4] = eulerPitchActual * M_PI / 180.0f;
 
         // Calculate control signal
+        //matrixMultiply(mulTemp1, krMatrix, ref, 3, 3, 3, 1);
         matrixMultiply(controlSig, kMatrix, states, 4, 5, 5, 1);
-        //for(i = 0; i < ; i++)
-          //controlSig[0] = controlSig[0] + kMatrix[0*]*states[i];
+        tempMat[0] = 0;
+        tempMat[1] = mulTemp1[0];
+        tempMat[2] = mulTemp1[1];
+        tempMat[3] = mulTemp1[2];
 
-        attitudeCounter = 0;
+        //matrixAdd(controlSig, tempMat, mulTemp2, 4, 1);
       }
 
       if (!altHold || !imuHasBarometer())
@@ -293,14 +291,10 @@ static void stabilizerTask(void* param)
         motorPowerM2 = limitThrust((uint16_t) (controlSig[1] + actuatorThrust));
         motorPowerM3 = limitThrust((uint16_t) (controlSig[2] + actuatorThrust));
         motorPowerM4 = limitThrust((uint16_t) (controlSig[3] + actuatorThrust));
-
         motorsSetRatio(MOTOR_M1, motorPowerM1);
         motorsSetRatio(MOTOR_M2, motorPowerM2);
         motorsSetRatio(MOTOR_M3, motorPowerM3);
         motorsSetRatio(MOTOR_M4, motorPowerM4);
-
-        //motorsSetRatio(MOTOR_M2, limitThrust((uint16_t) (controlSig[1] + actuatorThrust)));
-
       }
       else
       {
