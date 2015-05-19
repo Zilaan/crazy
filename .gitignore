@@ -11,4 +11,4 @@ version.c
 *.vim
 tags
 *.swp
-modules/src/matrix.c
+*matrix.c
