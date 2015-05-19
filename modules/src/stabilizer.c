@@ -115,9 +115,9 @@ void matrixMultiply(float target[], float K[], float u[], uint8_t m1, uint8_t n1
  *     4x3 3x1 + 4x5 5x1
  */
 float mulTemp1[4], mulTemp2[4], tempMat[4];
-static float ref[3] = {0,
-                          0,
-                          0}; // Ref from user (r)
+//static float ref[3] = {0,
+//                          0,
+//                          0}; // Ref from user (r)
 
 static float states[8] = {0,
                              0,
@@ -263,7 +263,7 @@ static void stabilizerTask(void* param)
 
         states[0] = gyro.x * TO_RAD;
         states[1] = gyro.y * TO_RAD;
-        states[2] = (eulerYawDesired - gyro.z) * TO_RAD;
+        states[2] = 0; //(eulerYawDesired - gyro.z) * TO_RAD;
         states[3] = (eulerRollDesired - eulerRollActual) * TO_RAD;
         states[4] = (eulerPitchDesired - eulerPitchActual) * TO_RAD;
 
@@ -289,7 +289,7 @@ static void stabilizerTask(void* param)
 
       if (actuatorThrust > 0)
       {
-        // Send control signal to the motors and add user thrus to it
+        // Send control signal to the motors and add user thrust to it
         motorPowerM1 = limitThrust((uint16_t) (controlSig[0] + actuatorThrust));
         motorPowerM2 = limitThrust((uint16_t) (controlSig[1] + actuatorThrust));
         motorPowerM3 = limitThrust((uint16_t) (controlSig[2] + actuatorThrust));
@@ -299,9 +299,6 @@ static void stabilizerTask(void* param)
         motorsSetRatio(MOTOR_M2, motorPowerM2);
         motorsSetRatio(MOTOR_M3, motorPowerM3);
         motorsSetRatio(MOTOR_M4, motorPowerM4);
-
-        //motorsSetRatio(MOTOR_M2, limitThrust((uint16_t) (controlSig[1] + actuatorThrust)));
-        
       }
       else
       {
