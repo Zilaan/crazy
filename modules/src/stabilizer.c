@@ -265,7 +265,7 @@ static void stabilizerTask(void* param)
         states[0] = gyro.x * TO_RAD;
         states[1] = gyro.y * TO_RAD;
         states[2] = (eulerYawDesired + gyro.z) * TO_RAD;
-        states[3] = (eulerRollDesired - eulerRollActual) * TO_RAD;
+        states[3] = (-eulerRollDesired + eulerRollActual) * TO_RAD;
         states[4] = (eulerPitchDesired -eulerPitchActual) * TO_RAD;
 
         // Calculate control signal
