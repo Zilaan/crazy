@@ -289,6 +289,7 @@ static void stabilizerTask(void* param)
 
 
 
+        attitudeCounter = 0;
       }
 
       if (!altHold || !imuHasBarometer())
